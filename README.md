@@ -41,7 +41,36 @@ velocity" as low as possible for your tracking situation. This velocity setting 
 droplets might move between frames, so setting it excessively high will make every particle a candidate for one
 particle in motion in the previous frame.
 
+**Note**: The bounding rectangle is calculated with respect to the coordinate frame of the image. As a
+result, the deformation parameter will only make sense for droplets aligned with the axis of the image.
+If droplets are going around a corner, and their long axis is rotating, the deformation parameter will look
+like it is changing even if the droplet does not deform, but instead rotates. A future update might change this,
+but right now the deformation is only valid for droplets aligned on the rectilinear axis of the image.
+
 ### Data Format
 
 It's easy to export the results to file, and from there use any CSV-reading toolkit or application to do whatever
 with the data. The output is a tab-delimeted table of values, with labeled headings as self-explanatory as possible.
+
+### Usage
+
+DropletTracker is for tracking binary, black-on-white droplets blobs. The plugin takes a binary
+(8-bit) stack and processes that. To get your raw images ready, an example macro is included in the
+DropletTracker menu entry. Here's the workflow right now:
+
+1.  Open the image stack you want to process.
+2.  Set the image threshold level manually using Image>Adjust>Threshold...
+Humans tend to be good at this step, so it isn't automatic yet.
+3. Run the preprocessing macro: Plugins > DropletTracker > 1 - Enhance Droplets.
+4. Check the output to make sure the droplets are clean, pure black blobs on a white background.
+5. Run DropletTracker under Plugins > DropletTracker > DropletTracker
+6. View and optionally save the resulting CSV. You may want to spot-check the values just to make
+sure everything's on target.
+
+### Installation
+
+1. Grab the DropletTracker folder and drop it into your ImageJ / plugins directory.
+2. Choose Plugins > Compile and Run... and select the DropletTracker_.java source file. 
+3. Restart ImageJ. All done!
+
+Find it under Plugins > DropletTracker.
