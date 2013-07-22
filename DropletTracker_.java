@@ -46,6 +46,13 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         float   boundsX, boundsY, boundsWidth, boundsHeight;
         float   perimeter;
         float   deformationParameter; // This is (Width - Height)/(Width + Height), and shows roundness.
+
+        // The Feret measures, also called "caliper" measures, indicate
+        // the maximum length, minimum width, and angle of major
+        // axis of a particle. The Feret deformation is the same
+        // deformation parameter as above, but using the Feret measures.
+        float   feretLength, feretWidth, feretAngle, feretDeformation;
+
         int     frameNumber;
         int     trackNr;
         float   velocity;
@@ -68,6 +75,10 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             this.velocity               = source.velocity;
             this.velocityIsValid        = source.velocityIsValid;
             this.deformationParameter   = source.deformationParameter;
+            this.feretLength            = source.feretLength;
+            this.feretWidth             = source.feretWidth;
+            this.feretAngle             = source.feretAngle;
+            this.feretDeformation       = source.feretDeformation;
         }
 
         public float distance (particle p) {
@@ -137,7 +148,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
         // Find centroid, area, bounding box, and perimeter using the
         // particle analyzer
-        int measurements = CENTROID+AREA+RECT+PERIMETER;
+        // Also, find the Feret (caliper) measures.
+        int measurements = CENTROID+AREA+RECT+PERIMETER+FERET;
 
         // Initialize results table
         // ParticleAnalyzer returns the bounding rectangle
@@ -162,29 +174,40 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             ParticleAnalyzer pa = new ParticleAnalyzer(options, measurements, rt, minSize, maxSize);
             pa.analyze(imp, stack.getProcessor(iFrame));
 
-            float[] sxRes = rt.getColumn(ResultsTable.X_CENTROID);              
-            float[] syRes = rt.getColumn(ResultsTable.Y_CENTROID);
-            float[] areaRes = rt.getColumn(ResultsTable.AREA);
+            float[] sxRes           = rt.getColumn(ResultsTable.X_CENTROID);              
+            float[] syRes           = rt.getColumn(ResultsTable.Y_CENTROID);
+            float[] areaRes         = rt.getColumn(ResultsTable.AREA);
 
-            float[] boundsXRes = rt.getColumn(ResultsTable.ROI_X);
-            float[] boundsYRes = rt.getColumn(ResultsTable.ROI_Y);
-            float[] boundsWidthRes = rt.getColumn(ResultsTable.ROI_WIDTH);
+            float[] boundsXRes      = rt.getColumn(ResultsTable.ROI_X);
+            float[] boundsYRes      = rt.getColumn(ResultsTable.ROI_Y);
+            float[] boundsWidthRes  = rt.getColumn(ResultsTable.ROI_WIDTH);
             float[] boundsHeightRes = rt.getColumn(ResultsTable.ROI_HEIGHT);
 
-            float[] perimeterRes = rt.getColumn(ResultsTable.PERIMETER);
+            float[] feretLengthRes  = rt.getColumn(ResultsTable.FERET);
+            float[] feretWidthRes   = rt.getColumn(ResultsTable.MIN_FERET);
+            float[] feretAngleRes   = rt.getColumn(ResultsTable.FERET_ANGLE);
+
+            float[] perimeterRes    = rt.getColumn(ResultsTable.PERIMETER);
 
             if (sxRes==null)
                 continue;
 
             for (int iPart = 0; iPart < sxRes.length; iPart++) {
                 particle aParticle = new particle();
+
                 aParticle.x=sxRes[iPart];
                 aParticle.y=syRes[iPart];
                 aParticle.area=areaRes[iPart];
+
                 aParticle.boundsX = boundsXRes[iPart];
                 aParticle.boundsY = boundsYRes[iPart];
                 aParticle.boundsWidth = boundsWidthRes[iPart];
                 aParticle.boundsHeight = boundsHeightRes[iPart];
+
+                aParticle.feretLength = feretLengthRes[iPart];
+                aParticle.feretWidth = feretWidthRes[iPart];
+                aParticle.feretAngle = feretAngleRes[iPart];
+
                 aParticle.perimeter = perimeterRes[iPart];
                 aParticle.frameNumber = iFrame;
                 theParticles[iFrame-1].add(aParticle);
@@ -284,6 +307,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                     }
 
                     aParticle.deformationParameter = (aParticle.boundsWidth - aParticle.boundsHeight) / (aParticle.boundsWidth + aParticle.boundsHeight);
+                    aParticle.feretDeformation = (aParticle.feretLength - aParticle.feretWidth) / (aParticle.feretWidth + aParticle.feretLength);
 
                     prevParticle = aParticle;
                 }
@@ -294,7 +318,23 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         // with length greater than minTrackLength
         // since the number of tracks can be larger than can be accomodated by Excell, we deliver the tracks in chunks of maxColumns
         // As a side-effect, this makes the code quite complicated
-        String strHeadings = "Particle Number" + "\tFrame Number" + "\tX Centroid (px)" + "\tY Centroid (px)" + "\tArea (px^2)" + "\tPerimeter (px)" + "\tBounds X (px)" + "\tBounds Y (px)" + "\tBounds Width (px)" + "\tBounds Height (px)" + "\tVelocity (px/frame)" + "\tDeformation Parameter (W-H)/(W+H)" + "\tAmbiguous Movement?";
+        String strHeadings = "Particle Number" 
+                                + "\tFrame Number" 
+                                + "\tX Centroid (px)" 
+                                + "\tY Centroid (px)" 
+                                + "\tArea (px^2)" 
+                                + "\tPerimeter (px)" 
+                                + "\tBounds X (px)" 
+                                + "\tBounds Y (px)" 
+                                + "\tBounds Width (px)" 
+                                + "\tBounds Height (px)" 
+                                + "\tVelocity (px/frame)" 
+                                + "\tDeformation Parameter (W-H)/(W+H)" 
+                                + "\tAmbiguous Movement?" 
+                                + "\tFeret Length (px)" 
+                                + "\tFeret Width (px)" 
+                                + "\tFeret Angle (px)"
+                                + "\tFeret Deformation (FL-FW)/(FL+FW)";
 
         String contents="";
         boolean writefile=false;
@@ -305,7 +345,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                     outputfile.createNewFile();
                 }
                 catch (IOException e) {
-                    IJ.showMessage ("Error", "Could not create "+directory+filename);
+                    IJ.showMessage ("Error", "Could not create " + directory + filename);
                 }
             }
             if (outputfile.canWrite())
@@ -329,7 +369,23 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
                 for (ListIterator k = bTrack.listIterator(); k.hasNext(); ) {
                     particle aParticle=(particle) k.next();
-                    strLine += trackNumber + "\t" + aParticle.frameNumber + "\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t" + aParticle.deformationParameter + "\t" + (aParticle.flag ? "true" : "") + "\n";         
+                    strLine += trackNumber + "\t" 
+                                + aParticle.frameNumber + "\t" 
+                                + aParticle.x + "\t" 
+                                + aParticle.y + "\t" 
+                                + aParticle.area + "\t" 
+                                + aParticle.perimeter + "\t" 
+                                + aParticle.boundsX + "\t" 
+                                + aParticle.boundsY + "\t" 
+                                + aParticle.boundsWidth + "\t" 
+                                + aParticle.boundsHeight + "\t" 
+                                + (aParticle.velocityIsValid ? aParticle.velocity : "") 
+                                + "\t" + aParticle.deformationParameter + "\t" 
+                                + (aParticle.flag ? "true" : "") + "\t" 
+                                + aParticle.feretLength + "\t" 
+                                + aParticle.feretWidth + "\t" 
+                                + aParticle.feretAngle + "\t"
+                                + aParticle.feretDeformation + "\n";        
                 }
                 IJ.write(strLine);
                 trackNumber++;
