@@ -186,7 +186,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                 aParticle.boundsWidth = boundsWidthRes[iPart];
                 aParticle.boundsHeight = boundsHeightRes[iPart];
                 aParticle.perimeter = perimeterRes[iPart];
-                aParticle.frameNumber = iFrame-1;
+                aParticle.frameNumber = iFrame;
                 theParticles[iFrame-1].add(aParticle);
             }
             IJ.showProgress((double)iFrame/nFrames);
