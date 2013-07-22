@@ -36,10 +36,6 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     static int      maxSize = 999999;
     static int      minTrackLength = 2;
     static boolean  bSaveResultsFile = false;
-    static boolean  bShowLabels = false;
-    static boolean  bShowPositions = false;
-    static boolean  bShowPaths = false;
-    static boolean  bShowPathLengths = false;
     static float    maxVelocity = 150;
     static boolean  skipDialogue = false;
 
@@ -49,23 +45,29 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         float   area;
         float   boundsX, boundsY, boundsWidth, boundsHeight;
         float   perimeter;
+        float   deformationParameter; // This is (Width - Height)/(Width + Height), and shows roundness.
         int     frameNumber;
         int     trackNr;
-        boolean inTrack=false;
-        boolean flag=false;
+        float   velocity;
+        boolean velocityIsValid;
+        boolean inTrack = false;
+        boolean flag = false;
 
         public void copy(particle source) {
-            this.x              = source.x;
-            this.y              = source.y;
-            this.area           = source.area;
-            this.boundsX        = source.boundsX;
-            this.boundsY        = source.boundsY;
-            this.boundsWidth    = source.boundsWidth;
-            this.boundsHeight   = source.boundsHeight;
-            this.perimeter      = source.perimeter;
-            this.frameNumber    = source.frameNumber;
-            this.inTrack        = source.inTrack;
-            this.flag           = source.flag;
+            this.x                      = source.x;
+            this.y                      = source.y;
+            this.area                   = source.area;
+            this.boundsX                = source.boundsX;
+            this.boundsY                = source.boundsY;
+            this.boundsWidth            = source.boundsWidth;
+            this.boundsHeight           = source.boundsHeight;
+            this.perimeter              = source.perimeter;
+            this.frameNumber            = source.frameNumber;
+            this.inTrack                = source.inTrack;
+            this.flag                   = source.flag;
+            this.velocity               = source.velocity;
+            this.velocityIsValid        = source.velocityIsValid;
+            this.deformationParameter   = source.deformationParameter;
         }
 
         public float distance (particle p) {
@@ -92,14 +94,6 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
          maxVelocity = Float.valueOf(arg2).floatValue();
       else if (arg1.equals("saveResultsFile"))
          bSaveResultsFile = Boolean.valueOf(arg2);
-      else if (arg1.equals("showPathLengths"))
-         bShowPathLengths = Boolean.valueOf(arg2);
-      else if (arg1.equals("showLabels"))
-         bShowLabels = Boolean.valueOf(arg2);
-      else if (arg1.equals("showPositions"))
-         bShowPositions = Boolean.valueOf(arg2);
-      else if (arg1.equals("showPaths"))
-         bShowPaths = Boolean.valueOf(arg2);
       else if (arg1.equals("skipDialogue"))
          skipDialogue = Boolean.valueOf(arg2);
    }
@@ -112,10 +106,6 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
          gd.addNumericField("Maximum_ Velocity (pixels/frame):", maxVelocity, 0);
          gd.addNumericField("Minimum_ track length (frames)", minTrackLength, 0);
          gd.addCheckbox("Save Results File", bSaveResultsFile);
-         gd.addCheckbox("Display Path Lengths", bShowPathLengths);
-         gd.addCheckbox("Show Labels", bShowLabels);
-         gd.addCheckbox("Show Positions", bShowPositions);
-         gd.addCheckbox("Show Paths", bShowPaths);
          gd.showDialog();
          if (gd.wasCanceled())
             return;
@@ -125,12 +115,6 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
          maxVelocity = (float)gd.getNextNumber();
          minTrackLength = (int)gd.getNextNumber();
          bSaveResultsFile = gd.getNextBoolean();
-         bShowPathLengths = gd.getNextBoolean();
-         bShowLabels = gd.getNextBoolean();
-         bShowPositions = gd.getNextBoolean();
-         bShowPaths = gd.getNextBoolean();
-         if (bShowPositions)
-            bShowLabels =true;
       }
       if (bSaveResultsFile) {
          SaveDialog sd=new  SaveDialog("Save Track Results","trackresults",".txt");
@@ -140,8 +124,6 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         track(imp, minSize, maxSize, maxVelocity, directory, filename);
     }
     
-
-
 
     public void track(ImagePlus imp, int minSize, int maxSize, float maxVelocity, String directory, String filename) {
         int nFrames = imp.getStackSize();
@@ -283,11 +265,36 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             }
         }
 
+
+        /* Now calculate velocities (and deformation parameters, while we're at it.) */
+
+        for (ListIterator iT = theTracks.listIterator(); iT.hasNext();) {
+            List bTrack=(ArrayList) iT.next();
+            // filter by size; move on if too short
+            if (bTrack.size() >= minTrackLength) {
+                particle prevParticle = null;
+                for (ListIterator k = bTrack.listIterator(); k.hasNext(); ) {
+                    particle aParticle=(particle) k.next();
+
+                    if (prevParticle != null) {
+                        aParticle.velocity = aParticle.distance(prevParticle);
+                        aParticle.velocityIsValid = true;
+                    } else {
+                        aParticle.velocityIsValid = false; // No previous particles, so no velocity available
+                    }
+
+                    aParticle.deformationParameter = (aParticle.boundsWidth - aParticle.boundsHeight) / (aParticle.boundsWidth + aParticle.boundsHeight);
+
+                    prevParticle = aParticle;
+                }
+            }
+        }
+
         // Create the column headings based on the number of tracks
         // with length greater than minTrackLength
         // since the number of tracks can be larger than can be accomodated by Excell, we deliver the tracks in chunks of maxColumns
         // As a side-effect, this makes the code quite complicated
-        String strHeadings = "Particle Track Number" + "\tFrame Number" + "\tX Centroid" + "\tY Centroid" + "\tArea" + "\tPerimeter" + "\tBounds X" + "\tBounds Y" + "\tBounds Width" + "\tBounds Height" + "\tFlag";
+        String strHeadings = "Particle Track Number" + "\tFrame Number" + "\tX Centroid (px)" + "\tY Centroid (px)" + "\tArea (px^2)" + "\tPerimeter (px)" + "\tBounds X (px)" + "\tBounds Y (px)" + "\tBounds Width (px)" + "\tBounds Height (px)" + "\tVelocity (px/frame)" + "\tDeformation Parameter (W-H)/(W+H)" + "\tFlag";
 
         String contents="";
         boolean writefile=false;
@@ -322,14 +329,11 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
                 for (ListIterator k = bTrack.listIterator(); k.hasNext(); ) {
                     particle aParticle=(particle) k.next();
-                    strLine += trackNumber + "\t" + aParticle.frameNumber + "\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + aParticle.flag + "\n";
-                                        
+                    strLine += trackNumber + "\t" + aParticle.frameNumber + "\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t" + aParticle.deformationParameter + "\t" + aParticle.flag + "\n";         
                 }
                 IJ.write(strLine);
                 trackNumber++;
-                
             }
-
         }
 
 /* // This file writing code is identical to the display code above. TODO get the display working then copy it here.
