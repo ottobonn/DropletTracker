@@ -357,6 +357,19 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         // display the table of results
         IJ.setColumnHeadings(strHeadings);
 
+        BufferedWriter writer = null;
+        if (writefile) {
+            try {
+                File outputfile = new File (directory,filename);
+                writer = new BufferedWriter (new FileWriter (outputfile));
+                writer.write(strHeadings + "\n", 0, strHeadings.length() + 1);
+            } catch (IOException e) {
+                if (filename != null)
+                    IJ.error ("An error occurred writing the file.\n\n" + e);
+                else IJ.error ("The filename was null.\n\n" + e);
+            }
+        }
+
         // Iterate by tracks
         int trackNumber = 1;
         for (ListIterator iT = theTracks.listIterator(); iT.hasNext();) {
@@ -379,8 +392,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                                 + aParticle.boundsY + "\t" 
                                 + aParticle.boundsWidth + "\t" 
                                 + aParticle.boundsHeight + "\t" 
-                                + (aParticle.velocityIsValid ? aParticle.velocity : "") 
-                                + "\t" + aParticle.deformationParameter + "\t" 
+                                + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t"
+                                + aParticle.deformationParameter + "\t" 
                                 + (aParticle.flag ? "true" : "") + "\t" 
                                 + aParticle.feretLength + "\t" 
                                 + aParticle.feretWidth + "\t" 
@@ -388,62 +401,19 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                                 + aParticle.feretDeformation + "\n";        
                 }
                 IJ.write(strLine);
-                trackNumber++;
-            }
-        }
 
-/* // This file writing code is identical to the display code above. TODO get the display working then copy it here.
-        // and now when we write to file
-        if (writefile) {
-            try {
-                File outputfile=new File (directory,filename);
-                BufferedWriter dos= new BufferedWriter (new FileWriter (outputfile));
-                dos.write(strHeadings+"\n",0,strHeadings.length()+1);
-                for (int j=1; j<=repeat;j++) {
-                    int to=j*maxColumns;
-                    if (to > frameCount-1)
-                        to=frameCount-1;
-                    String stLine="Tracks " + ((j-1)*maxColumns+1) +" to " +to;
-                    dos.write(stLine + "\n",0,stLine.length()+1);
-                    for (int i=0; i<=(nFrames-1); i++) {
-                        String strLine = "" + (i+1);
-                        int trackNr=0;
-                        int listTrackNr=0;
-                        for (ListIterator iT=theTracks.listIterator(); iT.hasNext();) {
-                            trackNr++;
-                            List bTrack=(ArrayList) iT.next();
-                            boolean particleFound=false;
-                            if (bTrack.size() >= minTrackLength) {
-                                listTrackNr++;
-                                if ( (listTrackNr>((j-1)*maxColumns)) && (listTrackNr<=(j*maxColumns))) {
-                                    for (ListIterator k=theParticles[i].listIterator();k.hasNext() && !particleFound;) {
-                                        particle aParticle=(particle) k.next();
-                                        if (aParticle.trackNr==trackNr) {
-                                            particleFound=true;
-                                            if (aParticle.flag) 
-                                                flag="*";
-                                            else
-                                                flag="";
-                                            strLine+="\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + flag;
-                                        }
-                                    }
-                                    if (!particleFound)
-                                        strLine+="\t \t \t \t \t \t \t \t \t ";
-                                }
-                            }
-                        }
-                        dos.write(strLine + "\n",0,strLine.length()+1);
+                if (writefile){
+                    try {
+                        if (writer != null)
+                            writer.write(strLine + "\n", 0, strLine.length() + 1);
+                    } catch (IOException e) {
+                        IJ.error ("An error occurred writing the file.\n\n" + e);
                     }
                 }
 
-                dos.close();
-            }
-            catch (IOException e) {
-                if (filename != null)
-                    IJ.error ("An error occurred writing the file. \n \n " + e);
+                trackNumber++;
             }
         }
-*/
     }
 
 
