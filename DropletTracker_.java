@@ -294,7 +294,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         // with length greater than minTrackLength
         // since the number of tracks can be larger than can be accomodated by Excell, we deliver the tracks in chunks of maxColumns
         // As a side-effect, this makes the code quite complicated
-        String strHeadings = "Particle Track Number" + "\tFrame Number" + "\tX Centroid (px)" + "\tY Centroid (px)" + "\tArea (px^2)" + "\tPerimeter (px)" + "\tBounds X (px)" + "\tBounds Y (px)" + "\tBounds Width (px)" + "\tBounds Height (px)" + "\tVelocity (px/frame)" + "\tDeformation Parameter (W-H)/(W+H)" + "\tFlag";
+        String strHeadings = "Particle Number" + "\tFrame Number" + "\tX Centroid (px)" + "\tY Centroid (px)" + "\tArea (px^2)" + "\tPerimeter (px)" + "\tBounds X (px)" + "\tBounds Y (px)" + "\tBounds Width (px)" + "\tBounds Height (px)" + "\tVelocity (px/frame)" + "\tDeformation Parameter (W-H)/(W+H)" + "\tAmbiguous Movement?";
 
         String contents="";
         boolean writefile=false;
@@ -329,7 +329,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
                 for (ListIterator k = bTrack.listIterator(); k.hasNext(); ) {
                     particle aParticle=(particle) k.next();
-                    strLine += trackNumber + "\t" + aParticle.frameNumber + "\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t" + aParticle.deformationParameter + "\t" + aParticle.flag + "\n";         
+                    strLine += trackNumber + "\t" + aParticle.frameNumber + "\t" + aParticle.x + "\t" + aParticle.y + "\t" + aParticle.area + "\t" + aParticle.perimeter + "\t" + aParticle.boundsX + "\t" + aParticle.boundsY + "\t" + aParticle.boundsWidth + "\t" + aParticle.boundsHeight + "\t" + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t" + aParticle.deformationParameter + "\t" + (aParticle.flag ? "true" : "") + "\n";         
                 }
                 IJ.write(strLine);
                 trackNumber++;
