@@ -297,7 +297,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         }
 
 
-        /* Now calculate velocities (and deformation parameters, while we're at it.) */
+        /* Now calculate velocities (and deformation parameters, while we're at it.)
+         */
 
         for (ListIterator iT = theTracks.listIterator(); iT.hasNext();) {
             List bTrack=(ArrayList) iT.next();
@@ -322,10 +323,15 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             }
         }
 
-        // Create the column headings based on the number of tracks
-        // with length greater than minTrackLength
-        // since the number of tracks can be larger than can be accomodated by Excell, we deliver the tracks in chunks of maxColumns
-        // As a side-effect, this makes the code quite complicated
+        // Create the column headings
+
+        /*
+            These velocities are in <calibration units> per frame, but a frame is not
+            really a unit of time. Here, given the framerate from the dialog, we can
+            also scale to real-world time.
+            Given a velocity of, say, meters per frame, and a framerate, we know
+            that the velocity in meters per second is (meters/frame)*(frames/second).
+        */
         String strHeadings = "Particle Number" 
                                 + "\tFrame Number" 
                                 + "\tX Centroid (" + unit + ")" 
@@ -336,7 +342,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                                 + "\tBounds Y (" + unit + ")" 
                                 + "\tBounds Width (" + unit + ")" 
                                 + "\tBounds Height (" + unit + ")" 
-                                + "\tVelocity (" + unit + "/frame)" 
+                                + "\tVelocity (" + unit + "/frame)" // apparent velocity (per image frame)
+                                + "\tVelocity (" + unit + "/s)"     // real velocity (per second)
                                 + "\tDeformation Parameter (W-H)/(W+H)" 
                                 + "\tAmbiguous Movement?" 
                                 + "\tFeret Length (" + unit + ")" 
@@ -400,7 +407,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                                 + aParticle.boundsY + "\t" 
                                 + aParticle.boundsWidth + "\t" 
                                 + aParticle.boundsHeight + "\t" 
-                                + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t"
+                                + (aParticle.velocityIsValid ? aParticle.velocity : "") + "\t"                      // apparent velocity
+                                + (aParticle.velocityIsValid ? aParticle.velocity * framesPerSecond : "") + "\t"    // real velocity
                                 + aParticle.deformationParameter + "\t" 
                                 + (aParticle.flag ? "true" : "") + "\t" 
                                 + aParticle.feretLength + "\t" 
