@@ -27,6 +27,7 @@ import ij.measure.*;
 public class DropletTracker_ implements PlugInFilter, Measurements  {
 
     ImagePlus   imp;
+    Calibration cal;
     int     nParticles;
     float[][]   ssx;
     float[][]   ssy;
@@ -88,6 +89,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
     public int setup(String arg, ImagePlus imp) {
         this.imp = imp;
+        cal = imp.getCalibration();
         if (IJ.versionLessThan("1.17y"))
             return DONE;
         else
@@ -111,21 +113,22 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
     public void run(ImageProcessor ip) {
       if (!skipDialogue) {
-         GenericDialog gd = new GenericDialog("Object Tracker");
-         gd.addNumericField("Minimum Object Size (pixels): ", minSize, 0);
-         gd.addNumericField("Maximum Object Size (pixels): ", maxSize, 0);
-         gd.addNumericField("Maximum_ Velocity (pixels/frame):", maxVelocity, 0);
-         gd.addNumericField("Minimum_ track length (frames)", minTrackLength, 0);
-         gd.addCheckbox("Save Results File", bSaveResultsFile);
-         gd.showDialog();
-         if (gd.wasCanceled())
-            return;
+        String unit = cal.getUnit();
+        GenericDialog gd = new GenericDialog("Object Tracker");
+        gd.addNumericField("Minimum Object Size (" + unit + "): ", minSize, 0);
+        gd.addNumericField("Maximum Object Size (" + unit + "): ", maxSize, 0);
+        gd.addNumericField("Maximum_ Velocity (" + unit + "/frame):", maxVelocity, 0);
+        gd.addNumericField("Minimum_ track length (frames)", minTrackLength, 0);
+        gd.addCheckbox("Save Results File", bSaveResultsFile);
+        gd.showDialog();
+        if (gd.wasCanceled())
+        return;
 
-         minSize = (int)gd.getNextNumber();
-         maxSize = (int)gd.getNextNumber();
-         maxVelocity = (float)gd.getNextNumber();
-         minTrackLength = (int)gd.getNextNumber();
-         bSaveResultsFile = gd.getNextBoolean();
+        minSize = (int)gd.getNextNumber();
+        maxSize = (int)gd.getNextNumber();
+        maxVelocity = (float)gd.getNextNumber();
+        minTrackLength = (int)gd.getNextNumber();
+        bSaveResultsFile = gd.getNextBoolean();
       }
       if (bSaveResultsFile) {
          SaveDialog sd=new  SaveDialog("Save Track Results","trackresults",".txt");
@@ -139,9 +142,12 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     public void track(ImagePlus imp, int minSize, int maxSize, float maxVelocity, String directory, String filename) {
         int nFrames = imp.getStackSize();
         if (nFrames<2) {
-            IJ.showMessage("Tracker", "Stack required");
+            IJ.showMessage("DropletTracker", "Stack required");
             return;
         }
+
+        // Get real-world unit label (if it is available)
+        String unit = cal.getUnit();
 
         ImageStack stack = imp.getStack();
         int options = 0; // set all PA options false
@@ -320,20 +326,20 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
         // As a side-effect, this makes the code quite complicated
         String strHeadings = "Particle Number" 
                                 + "\tFrame Number" 
-                                + "\tX Centroid (px)" 
-                                + "\tY Centroid (px)" 
-                                + "\tArea (px^2)" 
-                                + "\tPerimeter (px)" 
-                                + "\tBounds X (px)" 
-                                + "\tBounds Y (px)" 
-                                + "\tBounds Width (px)" 
-                                + "\tBounds Height (px)" 
-                                + "\tVelocity (px/frame)" 
+                                + "\tX Centroid (" + unit + ")" 
+                                + "\tY Centroid (" + unit + ")" 
+                                + "\tArea (" + unit + "^2)" 
+                                + "\tPerimeter (" + unit + ")" 
+                                + "\tBounds X (" + unit + ")" 
+                                + "\tBounds Y (" + unit + ")" 
+                                + "\tBounds Width (" + unit + ")" 
+                                + "\tBounds Height (" + unit + ")" 
+                                + "\tVelocity (" + unit + "/frame)" 
                                 + "\tDeformation Parameter (W-H)/(W+H)" 
                                 + "\tAmbiguous Movement?" 
-                                + "\tFeret Length (px)" 
-                                + "\tFeret Width (px)" 
-                                + "\tFeret Angle (px)"
+                                + "\tFeret Length (" + unit + ")" 
+                                + "\tFeret Width (" + unit + ")" 
+                                + "\tFeret Angle (degrees)"
                                 + "\tFeret Deformation (FL-FW)/(FL+FW)";
 
         String contents="";
