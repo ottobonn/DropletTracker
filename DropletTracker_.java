@@ -35,11 +35,11 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
     static int      minSize = 1;            // in units?
     static int      maxSize = 999999;       // in units?
-    static int      minTrackLength = 2;     // in frames
+    static int      minTrackLength = 8;     // in frames
     static boolean  bSaveResultsFile = false;
-    static double   maxVelocity = 150;      // in pixels per frame; this needs to be converted before filling the dialog
+    static double   maxVelocity = 150;      // in units per frame
     static boolean  skipDialogue = false;
-    static double   framesPerSecond = 614;
+    static double   framesPerSecond = 614.382698983;
 
     public class particle {
         double   x;
