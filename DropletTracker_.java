@@ -29,35 +29,35 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     ImagePlus   imp;
     Calibration cal;
     int     nParticles;
-    float[][]   ssx;
-    float[][]   ssy;
+    double[][]   ssx;
+    double[][]   ssy;
     String directory,filename;
 
     static int      minSize = 1;            // in units?
     static int      maxSize = 999999;       // in units?
     static int      minTrackLength = 2;     // in frames
     static boolean  bSaveResultsFile = false;
-    static float    maxVelocity = 150;      // in pixels per frame; this needs to be converted before filling the dialog
+    static double   maxVelocity = 150;      // in pixels per frame; this needs to be converted before filling the dialog
     static boolean  skipDialogue = false;
     static double   framesPerSecond = 614;
 
     public class particle {
-        float   x;
-        float   y;
-        float   area;
-        float   boundsX, boundsY, boundsWidth, boundsHeight;
-        float   perimeter;
-        float   deformationParameter; // This is (Width - Height)/(Width + Height), and shows roundness.
+        double   x;
+        double   y;
+        double   area;
+        double   boundsX, boundsY, boundsWidth, boundsHeight;
+        double   perimeter;
+        double   deformationParameter; // This is (Width - Height)/(Width + Height), and shows roundness.
 
         // The Feret measures, also called "caliper" measures, indicate
         // the maximum length, minimum width, and angle of major
         // axis of a particle. The Feret deformation is the same
         // deformation parameter as above, but using the Feret measures.
-        float   feretLength, feretWidth, feretAngle, feretDeformation;
+        double   feretLength, feretWidth, feretAngle, feretDeformation;
 
         int     frameNumber;
         int     trackNr;
-        float   velocity;
+        double   velocity;
         boolean velocityIsValid;
         boolean inTrack = false;
         boolean flag = false;
@@ -83,8 +83,8 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             this.feretDeformation       = source.feretDeformation;
         }
 
-        public float distance (particle p) {
-            return (float) Math.sqrt(sqr(this.x-p.x) + sqr(this.y-p.y));
+        public double distance (particle p) {
+            return Math.sqrt(sqr(this.x-p.x) + sqr(this.y-p.y));
         }
     }
 
@@ -128,7 +128,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
 
         minSize = (int)gd.getNextNumber();
         maxSize = (int)gd.getNextNumber();
-        maxVelocity = (float)gd.getNextNumber();
+        maxVelocity = (double)gd.getNextNumber();
         minTrackLength = (int)gd.getNextNumber();
         bSaveResultsFile = gd.getNextBoolean();
       }
@@ -141,7 +141,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     }
     
 
-    public void track(ImagePlus imp, int minSize, int maxSize, float maxVelocity, String directory, String filename) {
+    public void track(ImagePlus imp, int minSize, int maxSize, double maxVelocity, String directory, String filename) {
         int nFrames = imp.getStackSize();
         if (nFrames<2) {
             IJ.showMessage("DropletTracker", "Stack required");
@@ -182,20 +182,20 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
             ParticleAnalyzer pa = new ParticleAnalyzer(options, measurements, rt, minSize, maxSize);
             pa.analyze(imp, stack.getProcessor(iFrame));
 
-            float[] sxRes           = rt.getColumn(ResultsTable.X_CENTROID);              
-            float[] syRes           = rt.getColumn(ResultsTable.Y_CENTROID);
-            float[] areaRes         = rt.getColumn(ResultsTable.AREA);
+            double[] sxRes           = rt.getColumnAsDoubles(ResultsTable.X_CENTROID);              
+            double[] syRes           = rt.getColumnAsDoubles(ResultsTable.Y_CENTROID);
+            double[] areaRes         = rt.getColumnAsDoubles(ResultsTable.AREA);
 
-            float[] boundsXRes      = rt.getColumn(ResultsTable.ROI_X);
-            float[] boundsYRes      = rt.getColumn(ResultsTable.ROI_Y);
-            float[] boundsWidthRes  = rt.getColumn(ResultsTable.ROI_WIDTH);
-            float[] boundsHeightRes = rt.getColumn(ResultsTable.ROI_HEIGHT);
+            double[] boundsXRes      = rt.getColumnAsDoubles(ResultsTable.ROI_X);
+            double[] boundsYRes      = rt.getColumnAsDoubles(ResultsTable.ROI_Y);
+            double[] boundsWidthRes  = rt.getColumnAsDoubles(ResultsTable.ROI_WIDTH);
+            double[] boundsHeightRes = rt.getColumnAsDoubles(ResultsTable.ROI_HEIGHT);
 
-            float[] feretLengthRes  = rt.getColumn(ResultsTable.FERET);
-            float[] feretWidthRes   = rt.getColumn(ResultsTable.MIN_FERET);
-            float[] feretAngleRes   = rt.getColumn(ResultsTable.FERET_ANGLE);
+            double[] feretLengthRes  = rt.getColumnAsDoubles(ResultsTable.FERET);
+            double[] feretWidthRes   = rt.getColumnAsDoubles(ResultsTable.MIN_FERET);
+            double[] feretAngleRes   = rt.getColumnAsDoubles(ResultsTable.FERET_ANGLE);
 
-            float[] perimeterRes    = rt.getColumn(ResultsTable.PERIMETER);
+            double[] perimeterRes    = rt.getColumnAsDoubles(ResultsTable.PERIMETER);
 
             if (sxRes==null)
                 continue;
@@ -248,7 +248,7 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
                         particle newParticle=new particle();
                         for (ListIterator jF=theParticles[iF].listIterator();jF.hasNext() && searchOn;) { 
                             particle testParticle =(particle) jF.next();
-                            float distance = testParticle.distance(oldParticle);
+                            double distance = testParticle.distance(oldParticle);
                             // record a particle when it is within the search radius, and when it had not yet been claimed by another track
                             if ( (distance < maxVelocity) && !testParticle.inTrack) {
                                 // if we had not found a particle before, it is easy
