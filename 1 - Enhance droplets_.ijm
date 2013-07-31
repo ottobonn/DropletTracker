@@ -17,6 +17,9 @@
 originalID = getImageID();
 getDimensions(width, height, channelCount, sliceCount, frameCount);
 
+// Convert to 8-bit depth
+run("8-bit");
+
 selectImage(originalID);
 setOption("BlackBackground", false);
 run("Make Binary", "method=Default background=Default");
