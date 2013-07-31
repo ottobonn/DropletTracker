@@ -33,12 +33,13 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     float[][]   ssy;
     String directory,filename;
 
-    static int      minSize = 1;
-    static int      maxSize = 999999;
-    static int      minTrackLength = 2;
+    static int      minSize = 1;            // in units?
+    static int      maxSize = 999999;       // in units?
+    static int      minTrackLength = 2;     // in frames
     static boolean  bSaveResultsFile = false;
-    static float    maxVelocity = 150;
+    static float    maxVelocity = 150;      // in pixels per frame; this needs to be converted before filling the dialog
     static boolean  skipDialogue = false;
+    static double   framesPerSecond = 614;
 
     public class particle {
         float   x;
@@ -114,11 +115,12 @@ public class DropletTracker_ implements PlugInFilter, Measurements  {
     public void run(ImageProcessor ip) {
       if (!skipDialogue) {
         String unit = cal.getUnit();
-        GenericDialog gd = new GenericDialog("Object Tracker");
-        gd.addNumericField("Minimum Object Size (" + unit + "): ", minSize, 0);
-        gd.addNumericField("Maximum Object Size (" + unit + "): ", maxSize, 0);
-        gd.addNumericField("Maximum_ Velocity (" + unit + "/frame):", maxVelocity, 0);
-        gd.addNumericField("Minimum_ track length (frames)", minTrackLength, 0);
+        GenericDialog gd = new GenericDialog("Droplet Tracker");
+        gd.addNumericField("Minimum Object Size", minSize, 0, 6, unit);
+        gd.addNumericField("Maximum Object Size", maxSize, 0, 6, unit);
+        gd.addNumericField("Maximum Velocity", maxVelocity, 0, 6, unit + "/frame");
+        gd.addNumericField("Minimum Track Length", minTrackLength, 0, 6, "frames");
+        gd.addNumericField("Frame Rate", framesPerSecond, 8, 12, "FPS");
         gd.addCheckbox("Save Results File", bSaveResultsFile);
         gd.showDialog();
         if (gd.wasCanceled())
